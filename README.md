@@ -17,13 +17,13 @@
 python3 -m venv .venv
 .venv/bin/pip install -e '.[dev]'
 
-srb doctor
-srb capabilities
-srb suite bbeh-mini
-srb matrix configs/smoke.toml --limit 2 --dry-run
-srb matrix configs/smoke.toml --limit 2
-srb report runs/smoke.jsonl
-srb ui --results-dir runs
+.venv/bin/srb doctor
+.venv/bin/srb capabilities
+.venv/bin/srb suite bbeh-mini
+.venv/bin/srb matrix configs/smoke.toml --limit 2 --dry-run
+.venv/bin/srb matrix configs/smoke.toml --limit 2
+.venv/bin/srb report runs/smoke.jsonl
+.venv/bin/srb ui --results-dir runs
 ```
 
 浏览器打开 `http://127.0.0.1:8765` 查看本地 dashboard。
@@ -31,7 +31,7 @@ srb ui --results-dir runs
 ### 单配置运行
 
 ```bash
-srb run \
+.venv/bin/srb run \
   --suite data/bbeh-mini.jsonl \
   --output runs/gpt56-high-standard.jsonl \
   --provider codex \
@@ -48,7 +48,7 @@ srb run \
 
 ```bash
 .venv/bin/pip install -e '.[reasoning-gym]'
-srb suite reasoning-gym \
+.venv/bin/srb suite reasoning-gym \
   --dataset basic_arithmetic \
   --dataset propositional_logic \
   --size 50 \
