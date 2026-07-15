@@ -52,6 +52,28 @@ class IncrementAdapter:
         )
 
 
+class MissingSessionAdapter(IncrementAdapter):
+    def run_research_turn(self, config, prompt, cwd: Path, session_id=None):
+        self.calls += 1
+        self.requested_sessions.append(session_id)
+        return AdapterResult(
+            "timeout",
+            "",
+            10,
+            -1,
+            {
+                "session_id": None,
+                "native_turns": 0,
+                "external_tool_calls": 0,
+                "subagent_calls": 0,
+                "observed_models": [],
+                "primary_model": None,
+            },
+            [],
+            "timeout",
+        )
+
+
 def config():
     return RunConfig("codex", "gpt-5.6-sol", "high", "standard", "strict", 10)
 
@@ -159,3 +181,19 @@ protocol = "strict"
     assert len(configs) == 4
     assert repeats == 2
     assert seed == 17
+
+
+def test_missing_session_before_min_rounds_is_failed_run(tmp_path):
+    task = load_research_task(make_task(tmp_path))
+    record, skipped = run_research_task(
+        task,
+        config(),
+        output=tmp_path / "runs/result.jsonl",
+        workspace_root=tmp_path / "workspaces",
+        adapter=MissingSessionAdapter(),
+    )
+
+    assert skipped is False
+    assert record["status"] == "failed"
+    assert record["termination_reason"] == "session_id_missing"
+    assert len(record["rounds"]) == 1

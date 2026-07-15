@@ -210,6 +210,7 @@ def main(argv: list[str] | None = None) -> int:
                 "min_rounds": task.min_rounds,
                 "round_timeout_seconds": task.round_timeout_seconds,
                 "declared_baseline_score": task.baseline_score,
+                "declared_validation_baseline_score": task.validation_baseline_score,
                 "starter_validation": validation.to_dict(),
                 "starter_test": test.to_dict(),
             }

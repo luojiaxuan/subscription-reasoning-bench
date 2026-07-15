@@ -28,7 +28,9 @@ def trajectory_metrics(
     final_score: float,
     higher_is_better: bool,
     max_rounds: int,
+    validation_baseline: float | None = None,
 ) -> dict[str, Any]:
+    process_baseline = baseline if validation_baseline is None else validation_baseline
     valid_rounds = [
         item
         for item in rounds
@@ -39,7 +41,8 @@ def trajectory_metrics(
     ]
     scores = [float(item["score"]) for item in valid_rounds]
     progress = [
-        normalized_improvement(score, baseline, target, higher_is_better) for score in scores
+        normalized_improvement(score, process_baseline, target, higher_is_better)
+        for score in scores
     ]
     auc = 0.0
     if progress:

@@ -28,6 +28,7 @@ class ResearchTask:
     min_rounds: int
     round_timeout_seconds: int
     baseline_score: float
+    validation_baseline_score: float
     target_score: float
     higher_is_better: bool
     digest: str
@@ -123,16 +124,27 @@ def load_research_task(path: Path) -> ResearchTask:
     if timeout < 1:
         raise ValueError("round_timeout_seconds must be positive")
     baseline = float(value["baseline_score"])
+    validation_baseline = float(value.get("validation_baseline_score", baseline))
     target = float(value["target_score"])
-    if not math.isfinite(baseline) or not math.isfinite(target) or baseline == target:
-        raise ValueError("baseline_score and target_score must be finite and different")
+    if not all(math.isfinite(item) for item in (baseline, validation_baseline, target)):
+        raise ValueError("baseline and target scores must be finite")
+    if baseline == target or validation_baseline == target:
+        raise ValueError("baseline and target scores must be different")
     higher_is_better = value.get("higher_is_better")
     if not isinstance(higher_is_better, bool):
         raise ValueError("higher_is_better must be a boolean")
     if higher_is_better and target <= baseline:
         raise ValueError("target_score must exceed baseline_score when higher_is_better=true")
+    if higher_is_better and target <= validation_baseline:
+        raise ValueError(
+            "target_score must exceed validation_baseline_score when higher_is_better=true"
+        )
     if not higher_is_better and target >= baseline:
         raise ValueError("target_score must be below baseline_score when higher_is_better=false")
+    if not higher_is_better and target >= validation_baseline:
+        raise ValueError(
+            "target_score must be below validation_baseline_score when higher_is_better=false"
+        )
     return ResearchTask(
         schema_version=1,
         id=task_id,
@@ -145,6 +157,7 @@ def load_research_task(path: Path) -> ResearchTask:
         min_rounds=min_rounds,
         round_timeout_seconds=timeout,
         baseline_score=baseline,
+        validation_baseline_score=validation_baseline,
         target_score=target,
         higher_is_better=higher_is_better,
         digest=_manifest_digest(root, value),

@@ -280,9 +280,11 @@ def run_research_task(
         )
         if validation_target and round_index >= task.min_rounds:
             state["termination_reason"] = "validation_target_reached"
+            _atomic_json(checkpoint, state)
             break
         if session_id is None and round_index < task.max_rounds:
             state["termination_reason"] = "session_id_missing"
+            _atomic_json(checkpoint, state)
             break
 
     final_grader = run_grader(task, workspace, "test", len(rounds))
@@ -293,6 +295,7 @@ def run_research_task(
         final_score=final_grader.score,
         higher_is_better=task.higher_is_better,
         max_rounds=task.max_rounds,
+        validation_baseline=task.validation_baseline_score,
     )
     metrics["validation_target_reached"] = state.get("termination_reason") == (
         "validation_target_reached"
@@ -309,7 +312,7 @@ def run_research_task(
         for item in rounds
         if item.get("native_metrics", {}).get("primary_model")
     ]
-    if not final_grader.valid:
+    if not final_grader.valid or len(rounds) < task.min_rounds:
         status = "failed"
     elif metrics["target_reached"]:
         status = "target_reached"
@@ -339,6 +342,7 @@ def run_research_task(
         "workspace": str(workspace),
         "session_id": session_id,
         "baseline_score": task.baseline_score,
+        "validation_baseline_score": task.validation_baseline_score,
         "target_score": task.target_score,
         "higher_is_better": task.higher_is_better,
         "final_score": final_grader.score,

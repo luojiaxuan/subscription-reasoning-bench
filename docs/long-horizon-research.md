@@ -45,7 +45,7 @@ starter/
 grader.py 或其他客观 grader
 ```
 
-`task.toml` 描述：task id/title、starter workspace、objective、grader argv、最大 research rounds、每轮 timeout、baseline、target 和 score direction。`grader_command` 是 argv list，不经过 shell；路径和 split/round 通过显式 placeholder 传入。
+`task.toml` 描述：task id/title、starter workspace、objective、grader argv、最大 research rounds、每轮 timeout、hidden-test baseline、可选的 validation baseline、target 和 score direction。validation trajectory 与最终 hidden-test improvement 分别使用对应 split 的 baseline，避免把 split 随机波动误记成研究进步。`grader_command` 是 argv list，不经过 shell；路径和 split/round 通过显式 placeholder 传入。
 
 Grader 对 stdout 输出一个 JSON object：
 

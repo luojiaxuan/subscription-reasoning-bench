@@ -17,5 +17,6 @@ max_rounds = 3
 min_rounds = 2
 round_timeout_seconds = 300
 baseline_score = 0.74
+validation_baseline_score = 0.78
 target_score = 0.97
 higher_is_better = true

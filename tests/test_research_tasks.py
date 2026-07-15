@@ -52,6 +52,7 @@ def test_load_research_task_and_run_objective_grader(tmp_path):
 
     assert task.id == "toy"
     assert task.min_rounds == 2
+    assert task.validation_baseline_score == task.baseline_score == 0.1
     assert len(task.digest) == 64
     assert result.score == 0.1
     assert result.metrics == {"split": "validation"}
