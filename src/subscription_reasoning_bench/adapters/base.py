@@ -23,6 +23,12 @@ class Adapter(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def build_research_command(
+        self, config: RunConfig, cwd: Path, session_id: str | None = None
+    ) -> list[str]:
+        raise NotImplementedError
+
+    @abstractmethod
     def parse_trace(
         self, trace: list[dict[str, Any]], stdout: str, stderr: str, latency_ms: int, exit_code: int
     ) -> AdapterResult:
@@ -31,6 +37,26 @@ class Adapter(ABC):
     def run(self, config: RunConfig, prompt: str, cwd: Path) -> AdapterResult:
         self.validate_config(config)
         command = self.build_command(config)
+        return self._run_command(command, config, prompt, cwd)
+
+    def run_research_turn(
+        self, config: RunConfig, prompt: str, cwd: Path, session_id: str | None = None
+    ) -> AdapterResult:
+        self.validate_config(config)
+        workspace = cwd.resolve(strict=True)
+        if not workspace.is_dir():
+            raise NotADirectoryError(workspace)
+        command = self.build_research_command(config, workspace, session_id)
+        result = self._run_command(command, config, prompt, workspace)
+        if session_id is not None:
+            result.native_metrics["requested_session_id"] = session_id
+            if result.native_metrics.get("session_id") is None:
+                result.native_metrics["session_id"] = session_id
+        return result
+
+    def _run_command(
+        self, command: list[str], config: RunConfig, prompt: str, cwd: Path
+    ) -> AdapterResult:
         started = time.monotonic()
         try:
             process = subprocess.run(

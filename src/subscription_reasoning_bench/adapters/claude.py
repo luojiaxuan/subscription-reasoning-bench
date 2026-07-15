@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import shutil
 from collections import Counter
+from pathlib import Path
 from typing import Any
 
 from ..models import AdapterResult, RunConfig
@@ -52,6 +53,43 @@ class ClaudeAdapter(Adapter):
             "You are a text-only reasoning benchmark participant. Follow the user prompt exactly.",
         ]
 
+    def build_research_command(
+        self, config: RunConfig, cwd: Path, session_id: str | None = None
+    ) -> list[str]:
+        tools = "Bash,Read,Edit,Write,Glob,Grep"
+        command = [
+            self.binary,
+            "--print",
+            "--output-format",
+            "stream-json",
+            "--verbose",
+            "--model",
+            config.model,
+            "--effort",
+            config.effort,
+            "--safe-mode",
+            "--no-chrome",
+            "--disable-slash-commands",
+            "--strict-mcp-config",
+            "--tools",
+            tools,
+            "--allowed-tools",
+            tools,
+            "--disallowed-tools",
+            "WebSearch,WebFetch",
+            "--permission-mode",
+            "acceptEdits",
+            "--system-prompt",
+            (
+                "You are a text-only AI research benchmark participant. Work only in the "
+                "provided local workspace, use the available local tools to run experiments, "
+                "and report evidence accurately."
+            ),
+        ]
+        if session_id is not None:
+            command.extend(["--resume", session_id])
+        return command
+
     def parse_trace(
         self, trace: list[dict[str, Any]], stdout: str, stderr: str, latency_ms: int, exit_code: int
     ) -> AdapterResult:
@@ -62,12 +100,18 @@ class ClaudeAdapter(Adapter):
         native_turns = 0
         primary_model: str | None = None
         observed_models: set[str] = set()
+        observed_session_ids: set[str] = set()
+        session_id: str | None = None
         for event in trace:
             event_type = str(event.get("type", "unknown"))
             event_types[event_type] += 1
             model = event.get("model")
             if isinstance(model, str):
                 observed_models.add(model)
+            event_session_id = event.get("session_id") or event.get("sessionId")
+            if isinstance(event_session_id, str):
+                session_id = session_id or event_session_id
+                observed_session_ids.add(event_session_id)
             message = event.get("message")
             if isinstance(message, dict):
                 message_model = message.get("model")
@@ -112,5 +156,7 @@ class ClaudeAdapter(Adapter):
             "content_types": dict(content_types),
             "primary_model": primary_model,
             "observed_models": sorted(observed_models),
+            "session_id": session_id,
+            "observed_session_ids": sorted(observed_session_ids),
         }
         return AdapterResult(status, response, latency_ms, exit_code, metrics, trace, error)

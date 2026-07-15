@@ -67,6 +67,50 @@ class CodexAdapter(Adapter):
         command.append("-")
         return command
 
+    def build_research_command(
+        self, config: RunConfig, cwd: Path, session_id: str | None = None
+    ) -> list[str]:
+        command = [
+            self.binary,
+            "--sandbox",
+            "workspace-write",
+            "--ask-for-approval",
+            "never",
+            "--cd",
+            str(cwd),
+            "exec",
+        ]
+        if session_id is not None:
+            command.append("resume")
+        command.extend(
+            [
+                "--model",
+                config.model,
+                "--ignore-user-config",
+                "--ignore-rules",
+                "--skip-git-repo-check",
+                "--json",
+                "--disable",
+                "browser_use",
+                "--disable",
+                "computer_use",
+                "-c",
+                'web_search="disabled"',
+                "-c",
+                f'model_reasoning_effort="{config.effort}"',
+            ]
+        )
+        if config.speed == "fast":
+            command.extend(["--enable", "fast_mode", "-c", 'service_tier="fast"'])
+        else:
+            command.extend(["--disable", "fast_mode"])
+        if session_id is None:
+            command.extend(["--color", "never"])
+        else:
+            command.append(session_id)
+        command.append("-")
+        return command
+
     def parse_trace(
         self, trace: list[dict[str, Any]], stdout: str, stderr: str, latency_ms: int, exit_code: int
     ) -> AdapterResult:
@@ -75,6 +119,8 @@ class CodexAdapter(Adapter):
         usage: dict[str, int] = {}
         messages: list[str] = []
         observed_models: set[str] = set()
+        observed_session_ids: set[str] = set()
+        session_id: str | None = None
         external_tool_calls = 0
         subagent_calls = 0
         for event in trace:
@@ -85,6 +131,12 @@ class CodexAdapter(Adapter):
             model = event.get("model")
             if isinstance(model, str):
                 observed_models.add(model)
+            event_session_id = (
+                event.get("thread_id") or event.get("threadId") or event.get("session_id")
+            )
+            if isinstance(event_session_id, str):
+                session_id = session_id or event_session_id
+                observed_session_ids.add(event_session_id)
             item = event.get("item")
             if not isinstance(item, dict):
                 continue
@@ -117,5 +169,7 @@ class CodexAdapter(Adapter):
             "item_types": dict(item_types),
             "primary_model": None,
             "observed_models": sorted(observed_models),
+            "session_id": session_id,
+            "observed_session_ids": sorted(observed_session_ids),
         }
         return AdapterResult(status, response, latency_ms, exit_code, metrics, trace, error)
