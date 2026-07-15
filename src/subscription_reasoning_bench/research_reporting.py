@@ -181,4 +181,46 @@ def summarize_research(records: list[dict[str, Any]]) -> dict[str, Any]:
         "total_runs": len(final_records),
         "config_count": len(configs),
         "configs": configs,
+        "paired": paired_research_deltas(final_records),
     }
+
+
+def paired_research_deltas(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    by_config: dict[str, dict[tuple[str, int], tuple[float, float]]] = defaultdict(dict)
+    for record in records:
+        improvement = _number(record.get("trajectory_metrics", {}).get("normalized_improvement"))
+        if improvement is None:
+            continue
+        key = (str(record.get("task_id", "unknown")), int(record.get("attempt", 1)))
+        completed = float(str(record.get("status", "")).lower() in COMPLETED_STATUSES)
+        by_config[research_config_label(record)][key] = (improvement, completed)
+    labels = sorted(by_config)
+    pairs = []
+    for index, left in enumerate(labels):
+        for right in labels[index + 1 :]:
+            common = sorted(set(by_config[left]) & set(by_config[right]))
+            if not common:
+                continue
+            improvement_deltas = [
+                by_config[right][key][0] - by_config[left][key][0] for key in common
+            ]
+            completion_deltas = [
+                by_config[right][key][1] - by_config[left][key][1] for key in common
+            ]
+            pairs.append(
+                {
+                    "left": left,
+                    "right": right,
+                    "n": len(common),
+                    "normalized_improvement_delta_right_minus_left": statistics.fmean(
+                        improvement_deltas
+                    ),
+                    "normalized_improvement_delta_ci95": bootstrap_ci(
+                        improvement_deltas, seed=index + len(pairs)
+                    ),
+                    "completion_rate_delta_right_minus_left": statistics.fmean(
+                        completion_deltas
+                    ),
+                }
+            )
+    return pairs

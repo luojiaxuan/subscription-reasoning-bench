@@ -74,6 +74,29 @@ class MissingSessionAdapter(IncrementAdapter):
         )
 
 
+class TimeoutWithSessionAdapter(IncrementAdapter):
+    def run_research_turn(self, config, prompt, cwd: Path, session_id=None):
+        self.calls += 1
+        self.requested_sessions.append(session_id)
+        current_session = session_id or "session-timeout"
+        return AdapterResult(
+            "timeout",
+            "",
+            10,
+            -1,
+            {
+                "session_id": current_session,
+                "native_turns": 0,
+                "external_tool_calls": 0,
+                "subagent_calls": 0,
+                "observed_models": [],
+                "primary_model": None,
+            },
+            [],
+            "timeout",
+        )
+
+
 def config():
     return RunConfig("codex", "gpt-5.6-sol", "high", "standard", "strict", 10)
 
@@ -197,3 +220,19 @@ def test_missing_session_before_min_rounds_is_failed_run(tmp_path):
     assert record["status"] == "failed"
     assert record["termination_reason"] == "session_id_missing"
     assert len(record["rounds"]) == 1
+
+
+def test_timeout_rounds_are_not_completed_even_when_session_resumes(tmp_path):
+    task = load_research_task(make_task(tmp_path))
+    record, _ = run_research_task(
+        task,
+        config(),
+        output=tmp_path / "runs/result.jsonl",
+        workspace_root=tmp_path / "workspaces",
+        adapter=TimeoutWithSessionAdapter(),
+    )
+
+    assert len(record["rounds"]) == task.max_rounds
+    assert record["status"] == "failed"
+    assert record["termination_reason"] == "round_budget_exhausted"
+    assert record["round_timeout_seconds"] == 10

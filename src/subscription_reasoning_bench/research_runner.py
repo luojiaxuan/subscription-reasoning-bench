@@ -312,7 +312,8 @@ def run_research_task(
         for item in rounds
         if item.get("native_metrics", {}).get("primary_model")
     ]
-    if not final_grader.valid or len(rounds) < task.min_rounds:
+    all_rounds_ok = all(item.get("status") == "ok" for item in rounds)
+    if not final_grader.valid or len(rounds) < task.min_rounds or not all_rounds_ok:
         status = "failed"
     elif metrics["target_reached"]:
         status = "target_reached"
@@ -341,6 +342,9 @@ def run_research_task(
         "termination_reason": state.get("termination_reason") or "round_budget_exhausted",
         "workspace": str(workspace),
         "session_id": session_id,
+        "min_rounds": task.min_rounds,
+        "max_rounds": task.max_rounds,
+        "round_timeout_seconds": task.round_timeout_seconds,
         "baseline_score": task.baseline_score,
         "validation_baseline_score": task.validation_baseline_score,
         "target_score": task.target_score,

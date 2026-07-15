@@ -133,3 +133,23 @@ def test_summarize_research_uses_round_native_metrics_as_fallback():
     assert row["total_native_turns"] == 12
     assert row["total_tool_calls"] == 5
     assert row["total_subagent_calls"] == 2
+
+
+def test_summarize_research_reports_paired_normalized_deltas():
+    left = research_record(task_id="task-1", attempt=1)
+    right = research_record(
+        task_id="task-1",
+        attempt=1,
+        provider="claude",
+        requested_model="claude-sonnet-5",
+        effort="high",
+    )
+    right["trajectory_metrics"]["normalized_improvement"] = 0.8
+
+    paired = summarize_research([left, right])["paired"]
+
+    assert len(paired) == 1
+    assert paired[0]["n"] == 1
+    assert paired[0]["left"].startswith("claude/")
+    assert paired[0]["normalized_improvement_delta_right_minus_left"] == pytest.approx(-0.3)
+    assert paired[0]["completion_rate_delta_right_minus_left"] == 0.0
