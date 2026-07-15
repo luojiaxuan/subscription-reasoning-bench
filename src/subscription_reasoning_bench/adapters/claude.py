@@ -56,7 +56,10 @@ class ClaudeAdapter(Adapter):
     def build_research_command(
         self, config: RunConfig, cwd: Path, session_id: str | None = None
     ) -> list[str]:
-        tools = "Bash,Read,Edit,Write,Glob,Grep"
+        tool_names = ["Bash", "Read", "Edit", "Write", "Glob", "Grep"]
+        if config.protocol == "orchestrated":
+            tool_names.append("Agent")
+        tools = ",".join(tool_names)
         command = [
             self.binary,
             "--print",
@@ -102,6 +105,7 @@ class ClaudeAdapter(Adapter):
         observed_models: set[str] = set()
         observed_session_ids: set[str] = set()
         session_id: str | None = None
+        subagent_calls = 0
         for event in trace:
             event_type = str(event.get("type", "unknown"))
             event_types[event_type] += 1
@@ -127,6 +131,9 @@ class ClaudeAdapter(Adapter):
                             continue
                         block_type = str(block.get("type", "unknown"))
                         content_types[block_type] += 1
+                        tool_name = str(block.get("name", ""))
+                        if block_type == "tool_use" and tool_name.lower() in {"agent", "task"}:
+                            subagent_calls += 1
                         text = block.get("text")
                         if block_type == "text" and isinstance(text, str):
                             response = text
@@ -151,7 +158,7 @@ class ClaudeAdapter(Adapter):
             "reasoning_events": content_types.get("thinking", 0),
             "message_events": content_types.get("text", 0),
             "external_tool_calls": external_tool_calls,
-            "subagent_calls": 0,
+            "subagent_calls": subagent_calls,
             "event_types": dict(event_types),
             "content_types": dict(content_types),
             "primary_model": primary_model,

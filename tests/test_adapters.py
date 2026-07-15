@@ -115,7 +115,10 @@ def test_claude_trace_parser_uses_result_turn_count():
             "type": "assistant",
             "message": {
                 "model": "claude-sonnet-5",
-                "content": [{"type": "text", "text": "<final_answer>7</final_answer>"}],
+                "content": [
+                    {"type": "tool_use", "name": "Agent", "input": {}},
+                    {"type": "text", "text": "<final_answer>7</final_answer>"},
+                ],
                 "usage": {"input_tokens": 12, "output_tokens": 4},
             },
         },
@@ -133,6 +136,7 @@ def test_claude_trace_parser_uses_result_turn_count():
     assert result.native_metrics["primary_model"] == "claude-sonnet-5"
     assert result.native_metrics["observed_models"] == ["claude-sonnet-5"]
     assert result.native_metrics["session_id"] == "22222222-2222-2222-2222-222222222222"
+    assert result.native_metrics["subagent_calls"] == 1
 
 
 def test_claude_research_command_enables_local_tools_and_persistence(tmp_path):
@@ -146,6 +150,14 @@ def test_claude_research_command_enables_local_tools_and_persistence(tmp_path):
     assert "--strict-mcp-config" in command
     assert "--no-session-persistence" not in command
     assert "--resume" not in command
+
+
+def test_claude_orchestrated_research_exposes_agent_tool(tmp_path):
+    config = RunConfig("claude", "claude-sonnet-5", "high", protocol="orchestrated")
+    command = ClaudeAdapter("claude").build_research_command(config, tmp_path.resolve())
+    tools = command[command.index("--tools") + 1]
+    assert tools == "Bash,Read,Edit,Write,Glob,Grep,Agent"
+    assert command[command.index("--allowed-tools") + 1] == tools
 
 
 def test_claude_research_command_resumes_same_session(tmp_path):
