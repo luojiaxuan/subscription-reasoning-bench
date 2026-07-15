@@ -5,11 +5,19 @@ import json
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 from .adapters.codex import resolve_codex_binary
 from .models import RunConfig
 from .reporting import load_records, print_summary, summarize
+from .research_reporting import summarize_research
+from .research_runner import (
+    load_research_matrix_config,
+    run_research_matrix,
+    run_research_task,
+)
+from .research_tasks import load_research_task, run_grader
 from .runner import load_matrix_config, run_matrix, with_timeout
 from .server import capabilities, serve
 from .suites import download_bbeh_mini, generate_reasoning_gym, load_suite, suite_hash
@@ -55,6 +63,42 @@ def build_parser() -> argparse.ArgumentParser:
     matrix.add_argument("--timeout", type=int)
     matrix.add_argument("--keep-traces", action="store_true")
     matrix.add_argument("--dry-run", action="store_true")
+
+    research = subparsers.add_parser("research", help="run long-horizon executable research tasks")
+    research_subparsers = research.add_subparsers(dest="research_command", required=True)
+    research_validate = research_subparsers.add_parser(
+        "validate", help="validate a research task manifest and both grader splits"
+    )
+    research_validate.add_argument("task", type=Path)
+    research_run = research_subparsers.add_parser(
+        "run", help="run one model configuration on one research task"
+    )
+    research_run.add_argument("task", type=Path)
+    research_run.add_argument("--output", type=Path, required=True)
+    research_run.add_argument("--workspace-root", type=Path, default=Path("runs/research-workspaces"))
+    research_run.add_argument("--provider", choices=["codex", "claude"], required=True)
+    research_run.add_argument("--model", required=True)
+    research_run.add_argument(
+        "--effort", choices=["high", "xhigh", "max", "ultra"], required=True
+    )
+    research_run.add_argument("--speed", choices=["standard", "fast"], default="standard")
+    research_run.add_argument(
+        "--protocol", choices=["strict", "orchestrated"], default="strict"
+    )
+    research_run.add_argument("--attempt", type=int, default=1)
+    research_run.add_argument("--keep-traces", action="store_true")
+    research_matrix = research_subparsers.add_parser(
+        "matrix", help="run a paired randomized long-horizon TOML matrix"
+    )
+    research_matrix.add_argument("config", type=Path)
+    research_matrix.add_argument("--keep-traces", action="store_true")
+    research_matrix.add_argument("--dry-run", action="store_true")
+    research_report = research_subparsers.add_parser(
+        "report", help="aggregate finalized long-horizon research records"
+    )
+    research_report.add_argument("results", type=Path)
+    research_report.add_argument("--json", action="store_true")
+    research_report.add_argument("--output", type=Path)
 
     report = subparsers.add_parser("report", help="aggregate a result JSONL")
     report.add_argument("results", type=Path)
@@ -150,6 +194,98 @@ def main(argv: list[str] | None = None) -> int:
         )
         print(f"executed={executed} resumed={skipped} output={output}")
         return 0
+    if args.command == "research":
+        if args.research_command == "validate":
+            task = load_research_task(args.task)
+            with tempfile.TemporaryDirectory(prefix="srb-research-validate-") as temp_dir:
+                workspace = Path(temp_dir) / "workspace"
+                shutil.copytree(task.starter_dir, workspace)
+                validation = run_grader(task, workspace, "validation", 0)
+                test = run_grader(task, workspace, "test", 0)
+            result = {
+                "task_id": task.id,
+                "title": task.title,
+                "digest": task.digest,
+                "max_rounds": task.max_rounds,
+                "min_rounds": task.min_rounds,
+                "round_timeout_seconds": task.round_timeout_seconds,
+                "declared_baseline_score": task.baseline_score,
+                "starter_validation": validation.to_dict(),
+                "starter_test": test.to_dict(),
+            }
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return 0 if validation.valid and test.valid else 1
+        if args.research_command == "run":
+            task = load_research_task(args.task)
+            config = RunConfig(
+                args.provider,
+                args.model,
+                args.effort,
+                args.speed,
+                args.protocol,
+                task.round_timeout_seconds,
+            )
+            record, skipped = run_research_task(
+                task,
+                config,
+                output=args.output.resolve(),
+                workspace_root=args.workspace_root.resolve(),
+                attempt=args.attempt,
+                keep_traces=args.keep_traces,
+            )
+            print(
+                f"executed={int(not skipped)} resumed={int(skipped)} status={record['status']} "
+                f"rounds={len(record['rounds'])} final_score={record['final_score']} "
+                f"output={args.output}"
+            )
+            return 0
+        if args.research_command == "matrix":
+            tasks, output, workspace_root, configs, repeats, seed = load_research_matrix_config(
+                args.config
+            )
+            if args.dry_run:
+                max_rounds = sum(task.max_rounds for task in tasks) * len(configs) * repeats
+                print(
+                    f"tasks={len(tasks)}\noutput={output}\nworkspace_root={workspace_root}\n"
+                    f"configs={len(configs)}\nrepeats={repeats}\nplanned_runs="
+                    f"{len(tasks) * len(configs) * repeats}\nmax_research_rounds={max_rounds}"
+                )
+                for task in tasks:
+                    print(f"task: {task.id} ({task.min_rounds}-{task.max_rounds} rounds)")
+                for config in configs:
+                    print(config.label)
+                return 0
+            executed, skipped = run_research_matrix(
+                tasks,
+                configs,
+                output=output,
+                workspace_root=workspace_root,
+                repeats=repeats,
+                seed=seed,
+                keep_traces=args.keep_traces,
+            )
+            print(f"executed={executed} resumed={skipped} output={output}")
+            return 0
+        if args.research_command == "report":
+            summary = summarize_research(load_records(args.results))
+            if args.output:
+                args.output.parent.mkdir(parents=True, exist_ok=True)
+                args.output.write_text(
+                    json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+                )
+            if args.json:
+                print(json.dumps(summary, ensure_ascii=False, indent=2))
+            else:
+                print(
+                    f"research_runs={summary['total_runs']} configs={summary['config_count']}"
+                )
+                for row in summary["configs"]:
+                    print(
+                        f"{row['label']} runs={row['runs']} final={row['final_score_mean']} "
+                        f"normalized_gain={row['normalized_improvement_mean']} "
+                        f"target_rate={row['target_reach_rate']}"
+                    )
+            return 0
     if args.command == "report":
         summary = summarize(load_records(args.results))
         if args.output:

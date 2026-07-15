@@ -6,7 +6,10 @@ from pathlib import Path
 import pytest
 
 from subscription_reasoning_bench.models import AdapterResult, RunConfig
-from subscription_reasoning_bench.research_runner import run_research_task
+from subscription_reasoning_bench.research_runner import (
+    load_research_matrix_config,
+    run_research_task,
+)
 from subscription_reasoning_bench.research_tasks import load_research_task
 
 from test_research_tasks import make_task
@@ -124,3 +127,35 @@ def test_research_runner_resumes_atomic_checkpoint_after_interruption(tmp_path):
     assert record["resumed_from_checkpoint"] is True
     assert len(record["rounds"]) == 2
     assert not checkpoints[0].exists()
+
+
+def test_load_research_matrix_expands_configs(tmp_path):
+    task_dir = make_task(tmp_path)
+    config_path = tmp_path / "research.toml"
+    config_path.write_text(
+        f"""tasks = [{json.dumps(str(task_dir))}]
+output = "runs/results.jsonl"
+workspace_root = "runs/workspaces"
+repeats = 2
+seed = 17
+
+[[matrix]]
+provider = "codex"
+models = ["gpt-5.6-sol"]
+efforts = ["high", "ultra"]
+speeds = ["standard", "fast"]
+protocol = "strict"
+""",
+        encoding="utf-8",
+    )
+
+    tasks, output, workspaces, configs, repeats, seed = load_research_matrix_config(
+        config_path
+    )
+
+    assert [task.id for task in tasks] == ["toy"]
+    assert output == (tmp_path / "runs/results.jsonl").resolve()
+    assert workspaces == (tmp_path / "runs/workspaces").resolve()
+    assert len(configs) == 4
+    assert repeats == 2
+    assert seed == 17

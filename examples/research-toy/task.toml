@@ -1,0 +1,21 @@
+schema_version = 1
+id = "nonlinear-classifier-discovery"
+title = "Discover a generalizable nonlinear classifier"
+objective_file = "objective.md"
+starter_dir = "starter"
+grader_command = [
+  "python3",
+  "grader.py",
+  "--workspace",
+  "{workspace}",
+  "--split",
+  "{split}",
+  "--round",
+  "{round}",
+]
+max_rounds = 3
+min_rounds = 2
+round_timeout_seconds = 300
+baseline_score = 0.74
+target_score = 0.97
+higher_is_better = true

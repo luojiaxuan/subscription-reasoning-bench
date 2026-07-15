@@ -6,16 +6,18 @@ import os
 import random
 import re
 import shutil
+import tomllib
 import uuid
 from dataclasses import replace
 from datetime import datetime, timezone
+from itertools import product
 from pathlib import Path
 from typing import Any
 
 from .adapters.base import Adapter
 from .models import RunConfig
 from .research_metrics import reached_target, trajectory_metrics
-from .research_tasks import GraderResult, ResearchTask, run_grader
+from .research_tasks import GraderResult, ResearchTask, load_research_task, run_grader
 from .runner import adapter_for
 
 
@@ -382,3 +384,36 @@ def run_research_matrix(
         executed += not was_skipped
         skipped += was_skipped
     return executed, skipped
+
+
+def load_research_matrix_config(
+    path: Path,
+) -> tuple[list[ResearchTask], Path, Path, list[RunConfig], int, int]:
+    with path.open("rb") as handle:
+        value = tomllib.load(handle)
+    base = path.parent.parent if path.parent.name == "configs" else path.parent
+    task_paths = value.get("tasks", [])
+    if not isinstance(task_paths, list) or not task_paths:
+        raise ValueError(f"research matrix has no tasks: {path}")
+    tasks = [load_research_task((base / str(task_path)).resolve()) for task_path in task_paths]
+    output = (base / str(value["output"])).resolve()
+    workspace_root = (base / str(value.get("workspace_root", "runs/research-workspaces"))).resolve()
+    repeats = int(value.get("repeats", 1))
+    seed = int(value.get("seed", 20260715))
+    default_protocol = str(value.get("protocol", "strict"))
+    configs: list[RunConfig] = []
+    for group in value.get("matrix", []):
+        provider = str(group["provider"])
+        models = [str(item) for item in group.get("models", [])]
+        efforts = [str(item) for item in group.get("efforts", [])]
+        speeds = [str(item) for item in group.get("speeds", ["standard"])]
+        protocol = str(group.get("protocol", default_protocol))
+        for model, effort, speed in product(models, efforts, speeds):
+            config = RunConfig(provider, model, effort, speed, protocol)  # type: ignore[arg-type]
+            adapter_for(provider).validate_config(config)
+            configs.append(config)
+    if repeats < 1:
+        raise ValueError("repeats must be positive")
+    if not configs:
+        raise ValueError(f"research matrix has no configurations: {path}")
+    return tasks, output, workspace_root, configs, repeats, seed

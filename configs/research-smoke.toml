@@ -1,0 +1,18 @@
+tasks = ["examples/research-toy"]
+output = "runs/research-smoke.jsonl"
+workspace_root = "runs/research-smoke-workspaces"
+repeats = 1
+seed = 20260715
+protocol = "strict"
+
+[[matrix]]
+provider = "codex"
+models = ["gpt-5.6-sol"]
+efforts = ["high"]
+speeds = ["standard"]
+
+[[matrix]]
+provider = "claude"
+models = ["claude-sonnet-5"]
+efforts = ["high"]
+speeds = ["standard"]
