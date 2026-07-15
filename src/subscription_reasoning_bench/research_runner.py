@@ -142,7 +142,11 @@ def _load_or_create_state(
             f"workspace exists without a checkpoint: {workspace}; move or remove this staging run"
         )
     workspace.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(task.starter_dir, workspace)
+    shutil.copytree(
+        task.starter_dir,
+        workspace,
+        ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "*.pyo", ".DS_Store"),
+    )
     value = _new_state(task, config, attempt, run_key, workspace)
     _atomic_json(checkpoint, value)
     return value, False

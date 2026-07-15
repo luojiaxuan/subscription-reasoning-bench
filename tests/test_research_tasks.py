@@ -80,3 +80,13 @@ def test_research_task_rejects_inverted_target(tmp_path):
 
     with pytest.raises(ValueError, match="target_score must exceed"):
         load_research_task(task_dir)
+
+
+def test_research_task_digest_ignores_python_cache(tmp_path):
+    task_dir = make_task(tmp_path)
+    original = load_research_task(task_dir).digest
+    cache = task_dir / "starter" / "__pycache__"
+    cache.mkdir()
+    (cache / "solution.cpython-314.pyc").write_bytes(b"transient")
+
+    assert load_research_task(task_dir).digest == original

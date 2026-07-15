@@ -68,9 +68,18 @@ def _manifest_digest(root: Path, manifest: dict[str, Any]) -> str:
     hasher = hashlib.sha256()
     hasher.update(json.dumps(manifest, sort_keys=True, separators=(",", ":")).encode())
     for path in sorted(root.rglob("*")):
-        if path.is_file():
-            hasher.update(path.relative_to(root).as_posix().encode())
-            hasher.update(path.read_bytes())
+        relative = path.relative_to(root)
+        if (
+            not path.is_file()
+            or "__pycache__" in relative.parts
+            or path.suffix in {".pyc", ".pyo"}
+            or path.name == ".DS_Store"
+        ):
+            continue
+        hasher.update(relative.as_posix().encode())
+        with path.open("rb") as handle:
+            while chunk := handle.read(1024 * 1024):
+                hasher.update(chunk)
     return hasher.hexdigest()
 
 
