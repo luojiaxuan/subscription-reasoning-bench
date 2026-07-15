@@ -1,0 +1,19 @@
+suite = "data/bbeh-mini.jsonl"
+output = "runs/bbeh-mini.jsonl"
+repeats = 3
+seed = 20260715
+timeout_seconds = 900
+protocol = "orchestrated"
+
+[[matrix]]
+provider = "codex"
+models = ["gpt-5.6-sol"]
+efforts = ["high", "xhigh", "max", "ultra"]
+speeds = ["standard", "fast"]
+
+[[matrix]]
+provider = "claude"
+models = ["claude-opus-4-8", "claude-sonnet-5", "claude-fable-5"]
+efforts = ["high", "xhigh", "max"]
+speeds = ["standard"]
+protocol = "strict"

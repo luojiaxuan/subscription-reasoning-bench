@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>Subscription Reasoning Bench</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">SUBSCRIPTION REASONING BENCH</p>
+          <h1>把“感觉更快”变成<br /><span>可复现的证据。</span></h1>
+          <p class="lede">订阅账号 · text-only reasoning · paired evaluation</p>
+        </div>
+        <div class="status" id="status"><i></i> 正在读取本地结果</div>
+      </header>
+
+      <section class="metrics" aria-label="关键指标">
+        <article><p>总运行数</p><strong id="total-runs">—</strong><small>all attempts</small></article>
+        <article><p>配置数量</p><strong id="config-count">—</strong><small>model × effort × speed</small></article>
+        <article><p>最佳正确率</p><strong id="best-accuracy">—</strong><small>end-to-end</small></article>
+        <article><p>最快 P50</p><strong id="fastest-latency">—</strong><small>wall-clock</small></article>
+      </section>
+
+      <section class="panel chart-panel">
+        <div class="panel-head">
+          <div><p class="kicker">QUALITY / LATENCY</p><h2>配置对比</h2></div>
+          <label>排序
+            <select id="sort-select">
+              <option value="accuracy">正确率</option>
+              <option value="latency">P50 时延</option>
+              <option value="turns">原生 turns</option>
+            </select>
+          </label>
+        </div>
+        <div id="comparison-chart" class="comparison-chart" role="img" aria-label="配置正确率和时延对比"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div><p class="kicker">RUN MATRIX</p><h2>详细结果</h2></div>
+          <input id="filter" type="search" placeholder="筛选 model / effort / speed" />
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>配置</th><th>完成</th><th>正确率</th><th>95% CI</th><th>P50</th><th>Turns</th><th>Subagents</th><th>违规</th></tr></thead>
+            <tbody id="result-table"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="empty-state" hidden>
+          <strong>还没有结果</strong>
+          <p>先运行 <code>srb matrix configs/smoke.toml --limit 2</code>，页面会自动读取 <code>runs/</code>。</p>
+        </div>
+      </section>
+
+      <section class="panel paired-panel">
+        <div class="panel-head"><div><p class="kicker">PAIRED DELTAS</p><h2>同题成对差异</h2></div></div>
+        <div id="paired-list" class="paired-list"></div>
+      </section>
+
+      <footer><span>Local-first dashboard</span><span>Raw traces stay on your machine</span></footer>
+    </main>
+    <script src="/app.js" defer></script>
+  </body>
+</html>

@@ -1,0 +1,39 @@
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "subscription-reasoning-bench"
+version = "0.1.0"
+description = "Text-only reasoning benchmark for subscription-authenticated agent CLIs"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [{ name = "Jiaxuan Luo" }]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+]
+dependencies = []
+
+[project.optional-dependencies]
+reasoning-gym = ["reasoning-gym>=0.1.25"]
+dev = ["pytest>=8.0", "ruff>=0.9"]
+
+[project.scripts]
+srb = "subscription_reasoning_bench.cli:main"
+
+[project.urls]
+Repository = "https://github.com/luojiaxuan/subscription-reasoning-bench"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/subscription_reasoning_bench"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"

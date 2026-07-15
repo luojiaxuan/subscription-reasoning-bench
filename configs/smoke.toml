@@ -1,0 +1,18 @@
+suite = "examples/smoke-suite.jsonl"
+output = "runs/smoke.jsonl"
+repeats = 1
+seed = 20260715
+timeout_seconds = 300
+protocol = "strict"
+
+[[matrix]]
+provider = "codex"
+models = ["gpt-5.6-sol"]
+efforts = ["high"]
+speeds = ["standard", "fast"]
+
+[[matrix]]
+provider = "claude"
+models = ["claude-sonnet-5"]
+efforts = ["high"]
+speeds = ["standard"]
