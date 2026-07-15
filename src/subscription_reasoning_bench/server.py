@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 
 from .adapters import ClaudeAdapter, CodexAdapter
 from .reporting import load_records, summarize
+from .research_reporting import summarize_research
 
 
 def capabilities() -> dict[str, object]:
@@ -51,12 +52,23 @@ def collect_records(results_dir: Path) -> list[dict[str, object]]:
     return records
 
 
+def short_records(records: list[dict[str, object]]) -> list[dict[str, object]]:
+    return [
+        record
+        for record in records
+        if not str(record.get("record_type", "")).startswith("research")
+    ]
+
+
 def make_handler(results_dir: Path, ui_dir: Path):
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:
             parsed = urlparse(self.path)
             if parsed.path == "/api/summary":
-                self.send_json(summarize(collect_records(results_dir)))
+                self.send_json(summarize(short_records(collect_records(results_dir))))
+                return
+            if parsed.path == "/api/research-summary":
+                self.send_json(summarize_research(collect_records(results_dir)))
                 return
             if parsed.path == "/api/capabilities":
                 self.send_json(capabilities())

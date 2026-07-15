@@ -13,7 +13,7 @@
         <div>
           <p class="eyebrow">SUBSCRIPTION REASONING BENCH</p>
           <h1>把“感觉更快”变成<br /><span>可复现的证据。</span></h1>
-          <p class="lede">订阅账号 · text-only reasoning · paired evaluation</p>
+          <p class="lede">订阅账号 · long-horizon AI research · paired text reasoning</p>
         </div>
         <div class="status" id="status"><i></i> 正在读取本地结果</div>
       </header>
@@ -25,9 +25,37 @@
         <article><p>最快 P50</p><strong id="fastest-latency">—</strong><small>wall-clock</small></article>
       </section>
 
+      <section class="panel research-panel">
+        <div class="panel-head research-head">
+          <div>
+            <p class="kicker">LONG-HORIZON RESEARCH</p>
+            <h2>Research Trajectories</h2>
+            <p class="panel-copy">观察模型经过多轮实验后是否持续进步、触达目标或过早停止。</p>
+          </div>
+        </div>
+        <div class="research-stats" aria-label="长时程研究指标">
+          <article><p>最终记录</p><strong id="research-runs">—</strong><small>finalized runs</small></article>
+          <article><p>研究配置</p><strong id="research-configs">—</strong><small>model × effort × speed</small></article>
+          <article><p>最佳归一化增益</p><strong id="research-best-gain">—</strong><small>normalized improvement</small></article>
+          <article><p>目标触达率</p><strong id="research-target-rate">—</strong><small>target reached</small></article>
+        </div>
+        <div id="research-chart" class="research-chart"></div>
+        <div id="research-legend" class="research-legend" aria-label="研究配置图例"></div>
+        <div class="empty research-empty" id="research-empty" hidden>
+          <strong>还没有长时程研究结果</strong>
+          <p>完成 research run 后，逐轮得分曲线与搜索轨迹指标会自动出现在这里。</p>
+        </div>
+        <div class="table-wrap research-table-wrap">
+          <table class="research-table">
+            <thead><tr><th>研究配置</th><th>完成</th><th>最终分</th><th>归一化增益</th><th>AUC</th><th>首次提升轮</th><th>最佳轮</th><th>后期增益</th><th>触达目标</th><th>提前停止</th><th>Turns</th><th>Tools</th><th>Subagents</th></tr></thead>
+            <tbody id="research-table"></tbody>
+          </table>
+        </div>
+      </section>
+
       <section class="panel chart-panel">
         <div class="panel-head">
-          <div><p class="kicker">QUALITY / LATENCY</p><h2>配置对比</h2></div>
+          <div><p class="kicker">SHORT-TASK QUALITY / LATENCY</p><h2>短题配置对比</h2></div>
           <label>排序
             <select id="sort-select">
               <option value="accuracy">正确率</option>
