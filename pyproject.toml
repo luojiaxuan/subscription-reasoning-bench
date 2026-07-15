@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "subscription-reasoning-bench"
-version = "0.1.0"
-description = "Text-only reasoning benchmark for subscription-authenticated agent CLIs"
+version = "0.2.0"
+description = "Long-horizon AI research benchmark for subscription-authenticated agent CLIs"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { file = "LICENSE" }
@@ -33,6 +33,7 @@ packages = ["src/subscription_reasoning_bench"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src"]
 
 [tool.ruff]
 line-length = 110

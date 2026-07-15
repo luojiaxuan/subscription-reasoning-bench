@@ -1,5 +1,7 @@
 # Benchmark 设计
 
+> 本文记录 `v0.1` 的短题 calibration 协议。`v0.2` 的主 benchmark 已改为多轮、可执行 AI research；主方法见 [long-horizon-research.md](long-horizon-research.md)。短题结果不得与 research trajectories 合并成一个 leaderboard 分数。
+
 ## 1. 研究问题
 
 本项目要分别回答四个问题：
