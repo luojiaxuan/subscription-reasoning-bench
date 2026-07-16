@@ -1,7 +1,7 @@
 tasks = ["examples/research-longloop-pilot"]
-output = "runs/fast-vs-standard-longloop.jsonl"
-workspace_root = "runs/fast-vs-standard-longloop-workspaces"
-repeats = 3
+output = "runs/fast-vs-standard-longloop-300s.jsonl"
+workspace_root = "runs/fast-vs-standard-longloop-300s-workspaces"
+repeats = 2
 seed = 20260715
 protocol = "strict"
 

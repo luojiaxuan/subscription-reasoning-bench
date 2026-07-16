@@ -1,7 +1,8 @@
 # Fast vs Standard long-loop pilot task
 
 这是一个本地 synthetic pilot fixture，用来检查同一个 Codex model/effort 在
-`standard` 与 `fast` 下能否完成固定 6 个外层 research rounds。它不是正式公开
+`standard` 与 `fast` 下能否完成固定 6 个外层 research rounds，每轮最多 300 秒。
+它不是正式公开
 dataset，也不进入长期 leaderboard。
 
 训练 CSV 是确定性生成的本地 staging artifact，不进 Git：

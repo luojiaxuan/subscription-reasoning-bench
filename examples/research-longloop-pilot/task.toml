@@ -15,7 +15,7 @@ grader_command = [
 ]
 max_rounds = 6
 min_rounds = 6
-round_timeout_seconds = 120
+round_timeout_seconds = 300
 baseline_score = 0.6816666666666666
 validation_baseline_score = 0.6371428571428571
 target_score = 0.94
