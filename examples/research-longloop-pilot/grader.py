@@ -1,12 +1,37 @@
 from __future__ import annotations
 
 import argparse
-import importlib.util
 import json
 import math
 import random
+import subprocess
+import sys
 from pathlib import Path
-from types import ModuleType
+
+
+CANDIDATE_RUNNER = r"""
+import contextlib
+import importlib.util
+import io
+import json
+import sys
+from pathlib import Path
+
+workspace = Path(sys.argv[1]).resolve(strict=True)
+solution_path = (workspace / "solution.py").resolve(strict=True)
+if workspace not in solution_path.parents:
+    raise ValueError("solution path escaped the workspace")
+payload = json.load(sys.stdin)
+spec = importlib.util.spec_from_file_location("longloop_candidate_solution", solution_path)
+if spec is None or spec.loader is None:
+    raise RuntimeError("could not load solution.py")
+module = importlib.util.module_from_spec(spec)
+with contextlib.redirect_stdout(io.StringIO()):
+    spec.loader.exec_module(module)
+    predict = getattr(module, "predict")
+    predictions = [int(predict(features)) for features in payload["features"]]
+print(json.dumps(predictions))
+"""
 
 
 def parse_args() -> argparse.Namespace:
@@ -17,16 +42,23 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def load_solution(workspace: Path) -> ModuleType:
-    path = (workspace / "solution.py").resolve()
-    if workspace.resolve() not in path.parents:
-        raise ValueError("solution path escaped the workspace")
-    spec = importlib.util.spec_from_file_location("longloop_candidate_solution", path)
-    if spec is None or spec.loader is None:
-        raise RuntimeError("could not load solution.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+def evaluate_predictions(workspace: Path, features: list[list[float]]) -> list[int]:
+    process = subprocess.run(
+        [sys.executable, "-I", "-c", CANDIDATE_RUNNER, str(workspace.resolve(strict=True))],
+        cwd=workspace.resolve(strict=True),
+        input=json.dumps({"features": features}),
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    if process.returncode != 0:
+        detail = process.stderr.strip() or process.stdout.strip()
+        raise RuntimeError(f"candidate runner exited with {process.returncode}: {detail}")
+    predictions = json.loads(process.stdout)
+    if not isinstance(predictions, list) or len(predictions) != len(features):
+        raise ValueError("candidate runner returned the wrong number of predictions")
+    return [int(prediction) for prediction in predictions]
 
 
 def target(features: list[float]) -> int:
@@ -88,12 +120,12 @@ def pi_feedback(score: float, round_index: int, split: str) -> str:
 def main() -> int:
     args = parse_args()
     try:
-        module = load_solution(args.workspace)
-        predict = getattr(module, "predict")
         examples = make_examples(args.split)
+        predictions = evaluate_predictions(
+            args.workspace, [features for features, _ in examples]
+        )
         correct = 0
-        for features, label in examples:
-            prediction = int(predict(features))
+        for prediction, (_, label) in zip(predictions, examples, strict=True):
             if prediction not in {0, 1}:
                 raise ValueError("predict must return 0 or 1")
             correct += prediction == label

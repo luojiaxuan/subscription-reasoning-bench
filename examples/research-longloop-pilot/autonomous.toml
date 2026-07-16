@@ -1,0 +1,22 @@
+schema_version = 1
+id = "nonlinear-classifier-autonomous-pilot"
+title = "Autonomously research a nonlinear classifier in one uninterrupted turn"
+objective_file = "objective-autonomous.md"
+starter_dir = "starter"
+grader_command = [
+  "python3",
+  "grader.py",
+  "--workspace",
+  "{workspace}",
+  "--split",
+  "{split}",
+  "--round",
+  "{round}",
+]
+max_rounds = 1
+min_rounds = 1
+round_timeout_seconds = 900
+baseline_score = 0.6816666666666666
+validation_baseline_score = 0.6371428571428571
+target_score = 0.94
+higher_is_better = true

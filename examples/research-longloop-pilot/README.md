@@ -20,3 +20,7 @@ python3 examples/research-longloop-pilot/generate_data.py \
 正式采用这个任务前，需要把版本化数据放到 Hugging Face、把 hidden grader/test
 放到隔离容器，并记录 dataset revision 与 image digest。当前生成数据仅留在
 `examples/research-longloop-pilot/starter/train.csv`，状态为 local staging。
+
+`autonomous.toml` 是 900 秒、单次 uninterrupted turn 的诊断变体，用来观测模型
+自发产生的 native turns/tool calls；它与外层固定 6 轮的 `task.toml` 回答不同问题。
+seed `4` 会让两次配对的实际顺序成为 Fast→Standard 与 Standard→Fast。
