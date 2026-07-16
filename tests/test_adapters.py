@@ -40,6 +40,47 @@ def test_codex_trace_parser_counts_process_shape():
     assert result.native_metrics["session_id"] == "11111111-1111-1111-1111-111111111111"
 
 
+def test_codex_trace_parser_deduplicates_tool_lifecycle_events():
+    trace = [
+        {"type": "turn.started"},
+        {
+            "type": "item.started",
+            "item": {"id": "tool-1", "type": "command_execution", "command": "pwd"},
+        },
+        {
+            "type": "item.completed",
+            "item": {
+                "id": "tool-1",
+                "type": "command_execution",
+                "command": "pwd",
+                "exit_code": 0,
+            },
+        },
+        {
+            "type": "item.completed",
+            "item": {"id": "tool-2", "type": "mcp_tool_call", "name": "lookup"},
+        },
+        {
+            "type": "item.started",
+            "item": {"id": "tool-3", "type": "mcp_tool_call", "name": "spawn_agent"},
+        },
+        {
+            "type": "item.completed",
+            "item": {"id": "tool-3", "type": "mcp_tool_call", "name": "spawn_agent"},
+        },
+        {
+            "type": "item.completed",
+            "item": {"type": "agent_message", "text": "done"},
+        },
+    ]
+
+    result = CodexAdapter("codex").parse_trace(trace, "", "", 123, 0)
+
+    assert result.native_metrics["external_tool_calls"] == 3
+    assert result.native_metrics["subagent_calls"] == 1
+    assert result.native_metrics["item_types"]["command_execution"] == 2
+
+
 def test_codex_research_command_is_writable_and_persistent(tmp_path):
     config = RunConfig("codex", "gpt-5.6-sol", "high", "standard")
     command = CodexAdapter("codex").build_research_command(config, tmp_path.resolve())

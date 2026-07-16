@@ -121,8 +121,10 @@ class CodexAdapter(Adapter):
         observed_models: set[str] = set()
         observed_session_ids: set[str] = set()
         session_id: str | None = None
-        external_tool_calls = 0
-        subagent_calls = 0
+        tool_item_ids: set[tuple[str, str]] = set()
+        anonymous_tool_calls = 0
+        subagent_item_ids: set[tuple[str, str]] = set()
+        anonymous_subagent_calls = 0
         for event in trace:
             event_type = str(event.get("type", "unknown"))
             event_types[event_type] += 1
@@ -146,11 +148,19 @@ class CodexAdapter(Adapter):
                 text = item.get("text") or item.get("content")
                 if isinstance(text, str):
                     messages.append(text)
+            item_id = item.get("id")
+            has_item_id = isinstance(item_id, str) and bool(item_id)
             if item_type in {"command_execution", "mcp_tool_call", "web_search", "image_generation"}:
-                external_tool_calls += 1
+                if has_item_id:
+                    tool_item_ids.add((item_type, item_id))
+                elif event_type == "item.completed":
+                    anonymous_tool_calls += 1
             serialized = json.dumps(item, sort_keys=True).lower()
             if "spawn_agent" in serialized or "subagent" in item_type or "collaboration" in item_type:
-                subagent_calls += 1
+                if has_item_id:
+                    subagent_item_ids.add((item_type, item_id))
+                elif event_type == "item.completed":
+                    anonymous_subagent_calls += 1
             item_model = item.get("model")
             if isinstance(item_model, str):
                 observed_models.add(item_model)
@@ -163,8 +173,8 @@ class CodexAdapter(Adapter):
             "native_turns": event_types.get("turn.started", 0),
             "reasoning_events": item_types.get("reasoning", 0),
             "message_events": sum(item_types[key] for key in ("agent_message", "assistant_message", "message")),
-            "external_tool_calls": external_tool_calls,
-            "subagent_calls": subagent_calls,
+            "external_tool_calls": len(tool_item_ids) + anonymous_tool_calls,
+            "subagent_calls": len(subagent_item_ids) + anonymous_subagent_calls,
             "event_types": dict(event_types),
             "item_types": dict(item_types),
             "primary_model": None,
