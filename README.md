@@ -15,6 +15,12 @@
 
 > 当前是 `v0.2.0` alpha。Git 中的 synthetic task 只验证 wiring，不是可发表 benchmark。正式跑 17 个配置前，先冻结真实任务、容器、预算和 artifact revision；完整运行会消耗大量订阅额度。
 
+2026-07-15 的受控 pilot 中，Fast 成功完成了一条 10.63 分钟、18 次唯一命令执行的
+autonomous research loop，hidden accuracy 为 `0.9742`；因此没有观察到“Fast 无法
+long loop”。但同一成功 pair 里 Fast 比 Standard 慢 `48.2%`，两种模式又各有
+一次 900 秒无事件 timeout，所以也没有证据表明 Fast 能稳定加速且不损质量。完整
+记录和结论边界见 [`docs/progress.md`](docs/progress.md)。
+
 ## 快速开始
 
 要求 Python 3.11+，并至少安装一个已登录订阅账号的 CLI：
@@ -174,6 +180,8 @@ Validation feedback 会进入下一轮 prompt；test feedback 永不发送给 ag
 | Artifact | Canonical location | Revision/status | Notes |
 | --- | --- | --- | --- |
 | Synthetic wiring task | 本 Git repo 的 [`examples/research-toy`](examples/research-toy) | `main` | 小型 source fixture，不是正式数据集 |
+| Fast/Standard long-loop pilot | [`examples/research-longloop-pilot`](examples/research-longloop-pilot) 与 [`configs/fast-vs-standard-autonomous.toml`](configs/fast-vs-standard-autonomous.toml) | frozen code `429d0d02e27d56023f95783d1b50e90c34368eb2`；task digest `458c01bcb79fe0da1fdf8180fb5e4f8e387f2aa64f1e74106dfdc3a434c3ccb2` | synthetic mechanism pilot，不进入正式 leaderboard |
+| 本次 pilot raw results / traces | 本机 `runs/fast-vs-standard-*.jsonl`、对应 traces/workspaces | local staging，未上传 | 拟定目的地 `luojiaxuan/subscription-research-bench-trajectories`；Git 只保留轻量 summary |
 | 正式 executable research task pack | Hugging Face dataset repo | pending，尚未构建 | 建议：`luojiaxuan/subscription-research-bench-executable-tasks` |
 | 正式 raw trajectories / results | Hugging Face dataset repo | pending，尚未运行 | 建议：`luojiaxuan/subscription-research-bench-trajectories` |
 | 旧 BBEH mini 上游数据 | [google-deepmind/bbeh](https://github.com/google-deepmind/bbeh) | `80d12ca916b7158f22293fcf3144f4d3d854d4be` | 仅 calibration；Apache-2.0 |
