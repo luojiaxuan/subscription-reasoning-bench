@@ -1,0 +1,12 @@
+tasks = ["examples/research-longloop-pilot"]
+output = "runs/fast-vs-standard-longloop.jsonl"
+workspace_root = "runs/fast-vs-standard-longloop-workspaces"
+repeats = 3
+seed = 20260715
+protocol = "strict"
+
+[[matrix]]
+provider = "codex"
+models = ["gpt-5.6-sol"]
+efforts = ["high"]
+speeds = ["standard", "fast"]

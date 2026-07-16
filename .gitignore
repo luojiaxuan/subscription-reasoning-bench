@@ -9,3 +9,4 @@ dist/
 *.egg-info/
 data/
 runs/
+examples/research-longloop-pilot/starter/train.csv
